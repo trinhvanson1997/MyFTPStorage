@@ -26,7 +26,7 @@ public class MainUI extends JFrame {
 	private RemoteDirPanel remoteDirPanel;
 
 	public Object lock = new Object();
-
+	Thread test;
 	public MainUI(FTPClient ftpClient, String hostname, String username, int port) {
 		this.ftpClient = ftpClient;
 		this.hostname = hostname;
@@ -87,9 +87,9 @@ public class MainUI extends JFrame {
 				String name = dir.getName();
 				remote = remoteDirPanel.getCurDir().getName() + "/" + name;
 
-				upload = new UploadThread(ftpClient, local, remote, lock);
+				upload = new UploadThread(ftpClient, local, remote);
 
-				Thread test = new Thread(upload);
+				test = new Thread(upload);
 				test.start();
 			}
 		});
@@ -98,7 +98,7 @@ public class MainUI extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				
+					upload.pause();
 				}
 			
 		});
@@ -107,8 +107,8 @@ public class MainUI extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				// TODO Auto-generated method stub
-				
-				
+			upload.resume();
+			
 				
 			}
 
