@@ -5,6 +5,8 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -26,7 +28,7 @@ public class MainUI extends JFrame {
 	private RemoteDirPanel remoteDirPanel;
 
 	public Object lock = new Object();
-	Thread test;
+
 	public MainUI(FTPClient ftpClient, String hostname, String username, int port) {
 		this.ftpClient = ftpClient;
 		this.hostname = hostname;
@@ -72,7 +74,7 @@ public class MainUI extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-			
+
 				String local = localDirPanel.getDetails().getText();
 				String remote;
 
@@ -87,10 +89,25 @@ public class MainUI extends JFrame {
 				String name = dir.getName();
 				remote = remoteDirPanel.getCurDir().getName() + "/" + name;
 
-				upload = new UploadThread(ftpClient, local, remote);
+				try {
+					InputStream inputStream = ftpClient.retrieveFileStream(remote);
+					int returnCode = ftpClient.getReplyCode();
+					
+					if (inputStream == null || returnCode == 550) {
+						upload = new UploadThread(ftpClient, local, remote, remoteDirPanel);
 
-				test = new Thread(upload);
-				test.start();
+						Thread upThread = new Thread(upload);
+						upThread.start();
+					}
+					else {
+						JOptionPane.showMessageDialog(null, "File "+name+" existed!");
+					}
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+				
 			}
 		});
 
@@ -98,18 +115,15 @@ public class MainUI extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-					upload.pause();
-				}
-			
+
+			}
+
 		});
 		localDirPanel.getBtnDelete().addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
-			upload.resume();
-			
-				
+
 			}
 
 		});
