@@ -93,6 +93,7 @@ public class MainUI extends JFrame {
 					InputStream inputStream = ftpClient.retrieveFileStream(remote);
 					int returnCode = ftpClient.getReplyCode();
 					
+					//Kiểm tra xem file đã tồn tại hay chưa
 					if (inputStream == null || returnCode == 550) {
 						upload = new UploadThread(ftpClient, local, remote, remoteDirPanel);
 
