@@ -32,7 +32,7 @@ public class LocalDirPanel extends JPanel implements ActionListener {
 	public String curPath;
 	private JTable table;
 	private JScrollPane scroll;
-	private String[] columns = { "Name", "Type", "Size", "Last Modified" };
+	private String[] columns = { "Name", "Type", "Size (kilobytes)", "Last Modified" };
 
 	public LocalDirPanel(String path) {
 		this.curPath = path;
@@ -164,7 +164,7 @@ public class LocalDirPanel extends JPanel implements ActionListener {
 			}
 			else if(files[i].isFile()) {
 				data[i + 1][1] = "file";
-				data[i + 1][2] = String.valueOf(files[i].length());
+				data[i + 1][2] = String.valueOf(files[i].length()/1024);
 			}
 			else {
 			data[i + 1][1] = "";}

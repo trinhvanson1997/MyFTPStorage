@@ -42,23 +42,29 @@ public class UploadThread implements Runnable, ActionListener {
 	private long len;
 	private int percent;
 
+	// cac bien de upload cac part
+	private long sizeFile; // kích thước 1 part
+	private int numberFile = 4; // số lượng part
+	private long limit;
+
 	// button pause, resume, cancel
 	private JFrame frame;
 	private JButton btnPause, btnResume, btnCancel;
-	
+
 	private RemoteDirPanel remoteDirPanel;
+
 	public UploadThread(FTPClient ftpClient, String localPath, String remotePath, RemoteDirPanel remoteDirPanel) {
 		this.ftpClient = ftpClient;
 		this.localPath = localPath;
 		this.remotePath = remotePath;
 		this.remoteDirPanel = remoteDirPanel;
-		
+
 		File file = new File(localPath);
 		String fileName = file.getName();
-		
+
 		frame = new JFrame();
 		frame.setLayout(new BorderLayout());
-		frame.setTitle("Uploading "+fileName+" 0%");
+		frame.setTitle("Uploading " + fileName + " 0%");
 		frame.setSize(400, 150);
 		frame.setResizable(true);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -88,12 +94,12 @@ public class UploadThread implements Runnable, ActionListener {
 					Double temp = ((double) count / len) * 100;
 					percent = temp.intValue();
 					progressBar.setValue(percent);
-					frame.setTitle("Uploading " + fileName+" "+percent + "%");
+					frame.setTitle("Uploading " + fileName + " " + percent + "%");
 				}
 			}
 		});
 		t.start();
-		
+
 		frame.setVisible(true);
 	}
 
@@ -101,43 +107,62 @@ public class UploadThread implements Runnable, ActionListener {
 	public void run() {
 		File localFile = new File(this.localPath);
 		len = localFile.length();
+		sizeFile = len / numberFile;
 
 		try {
 			InputStream is = new FileInputStream(localFile);
 
 			System.out.println("Starting upload file");
-			OutputStream os = this.ftpClient.storeFileStream(this.remotePath);
+			OutputStream os;
 
-			byte[] bytes = new byte[4096];
-			int read = 0;
+			int read = -1;
+			// biến count để đếm lưu lượng file đã upload
 			count = 0;
 
-			while (((read = is.read(bytes)) != -1)) {
-				count += read;
+			for (int i = 1; i <= numberFile; i++) {
+				limit = sizeFile * i;
+				if (i == numberFile)
+					limit = len;
 
-				os.write(bytes, 0, read);
+				os = this.ftpClient.storeFileStream(this.remotePath + "-part" + i);
 
-				if (paused) {
-					waitIfPaused();
+				byte[] bytes = new byte[4096];
+
+				while (((read = is.read(bytes)) != -1)) {
+
+					os.write(bytes, 0, read);
+
+					if (paused) {
+						waitIfPaused();
+					}
+
+					if (cancel) {
+						break;
+					}
+					count += read;
+
+					if (count == limit)
+						break;
+					if ((limit - count) < 4096)
+						bytes = new byte[(int) (limit - count)];
+
 				}
 
-				if (cancel) {
-					break;
+				os.close();
+				if (ftpClient.completePendingCommand()) {
+					System.out.println("Part " + i + " has been downloaded");
 				}
-
 			}
 
 			is.close();
-			os.close();
 
 			if (!cancel) {
-				boolean completed = ftpClient.completePendingCommand();
-				if (completed) {
-					System.out.println("file is uploaded successfully.");
-				}
+
+				System.out.println("file is uploaded successfully.");
+
 			} else {
 				System.out.println("Cancel download");
-				ftpClient.completePendingCommand();
+
 				try {
 					ftpClient.deleteFile(remotePath);
 				} catch (IOException e1) {
@@ -147,7 +172,7 @@ public class UploadThread implements Runnable, ActionListener {
 				frame.dispose();
 
 			}
-			remoteDirPanel.listDirectory(remotePath.substring(0,remotePath.lastIndexOf('\\')+1));
+			remoteDirPanel.listDirectory(remotePath.substring(0, remotePath.lastIndexOf('\\') + 1));
 
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -157,6 +182,28 @@ public class UploadThread implements Runnable, ActionListener {
 			e.printStackTrace();
 		}
 
+	}
+
+	public void joinFile() {
+
+		try {
+			OutputStream os = this.ftpClient.storeFileStream(this.remotePath);
+			byte[] bytes = new byte[4096];
+
+			for (int i = 1; i <= numberFile; i++) {
+				System.out.println("writing part " + i);
+				InputStream is = ftpClient.retrieveFileStream(this.remotePath + "-part" + i);
+				int read = -1;
+				while ((read = is.read(bytes)) != -1) {
+					os.write(bytes, 0, read);
+				}
+				is.close();
+			}
+			ftpClient.completePendingCommand();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public synchronized void pause() {

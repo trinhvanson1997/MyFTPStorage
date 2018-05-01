@@ -41,7 +41,7 @@ public class RemoteDirPanel extends JPanel implements ActionListener, ItemListen
 	private String curPath; // duong dan tuyet doi den thu muc htai
 
 	private JScrollPane scroll;
-	private String[] columns = { "Name", "Type", "Size", "Last Modified" };
+	private String[] columns = { "Name", "Type", "Size (kilobytes)", "Last Modified" };
 	private FTPClient ftpClient;
 
 	public RemoteDirPanel(String path, FTPClient ftpClient) {
@@ -219,7 +219,7 @@ public class RemoteDirPanel extends JPanel implements ActionListener, ItemListen
 			}
 			else if(files[i].isFile()) {
 				data[i + 1][1] = "file";
-				data[i + 1][2] = String.valueOf(files[i].getSize());
+				data[i + 1][2] = String.valueOf(files[i].getSize()/1024);
 			}
 			else {
 			data[i + 1][1] = "";}
